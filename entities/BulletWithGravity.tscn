@@ -1,0 +1,14 @@
+[gd_scene load_steps=4 format=2]
+
+[ext_resource path="res://shared/components/RigidBody2D/ApplyInitialImpulse.tscn" type="PackedScene" id=1]
+[ext_resource path="res://shared/components/Node2D/ApplyInitialRotationTowardsMouse.tscn" type="PackedScene" id=2]
+[ext_resource path="res://shared/entities/BulletWithGravity.cs" type="Script" id=3]
+
+[node name="PlayerBulletWithGravity" type="RigidBody2D"]
+gravity_scale = 5.0
+script = ExtResource( 3 )
+
+[node name="ApplyInitialRotationTowardsMouse" parent="." instance=ExtResource( 2 )]
+
+[node name="ApplyInitialImpulse" parent="." instance=ExtResource( 1 )]
+ImpulseForce = Vector2( 500, 0 )
