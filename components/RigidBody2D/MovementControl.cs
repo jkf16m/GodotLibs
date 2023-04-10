@@ -1,80 +1,76 @@
-using Godot;
 using System;
+using Godot;
 
-/**
-In this class we define what to do when the player presses a key.
-**/
-public class MovementControl : Node, IComponent<RigidBody2D>{
-    public RigidBody2D Parent{get; private set;}
-
-    [Export]
-    public float MaxSpeed = 100;
-    [Export]
-    public float Speed = 100;
-
-    [Export]
-    public bool CanJump = false;
-    [Export]
-    public Vector2 JumpForce = new Vector2(0, -100);
+public class MovementControl : Component<RigidBody2D, MovementControl._Props, None>{
+    public class _Props{
+        public string UpAction;
+        public string DownAction;
+        public string LeftAction;
+        public string RightAction;
+        public string JumpAction;
+        public float? MaxSpeed;
+        public float? Speed;
+        public float? JumpForce;
+        public float? Desacceleration;
+    }
 
     [Export]
-    public bool CanMove = true;
+    public string UpAction{get; set;} = "ui_up";
     [Export]
-    public float Desacceleration = 100;
+    public string DownAction{get; set;} = "ui_down";
     [Export]
-    public bool FixedXAxis = false;
+    public string LeftAction{get; set;} = "ui_left";
     [Export]
-    public bool FixedYAxis = false;
+    public string RightAction{get; set;} = "ui_right";
+    [Export]
+    public string JumpAction{get; set;} = "ui_accept";
+    [Export]
+    public float MaxSpeed{get; set;} = 100;
+    [Export]
+    public float Speed{get; set;} = 100;
+    [Export]
+    public float JumpForce{get; set;} = 100;
+    [Export]
+    public float Desacceleration{get; set;} = 0.5f;
 
-
-
-    [Export]
-    public string UpAction = "ui_up";
-    [Export]
-    public string DownAction = "ui_down";
-    [Export]
-    public string LeftAction = "ui_left";
-    [Export]
-    public string RightAction = "ui_right";
-    [Export]
-    public string JumpAction = "ui_accept";
-
-    public float FixedXAxisValue = 0;
-    public float FixedYAxisValue = 0;
-    public override void _Ready(){
-        Parent = GetParentOrNull<RigidBody2D>();
-
-        if(Parent == null){
-            throw new Exception("Parent is not a RigidBody2D");
-        }
-
-        if(FixedXAxis){
-            FixedXAxisValue = Parent.Position.x;
-        }
-        if(FixedYAxis){
-            FixedYAxisValue = Parent.Position.y;
-        }
-        
+    protected override void _Init(MovementControl._Props props){
+        UpAction = props.UpAction ?? UpAction;
+        DownAction = props.DownAction ?? DownAction;
+        LeftAction = props.LeftAction ?? LeftAction;
+        RightAction = props.RightAction ?? RightAction;
+        JumpAction = props.JumpAction ?? JumpAction;
+        Speed = props.Speed ?? Speed;
+        MaxSpeed = props.MaxSpeed ?? MaxSpeed;
+        JumpForce = props.JumpForce ?? JumpForce;
+        Desacceleration = props.Desacceleration ?? Desacceleration;
     }
 
 
-    /**
-    <summary>
-    This method should be called inside the _IntegrateForces method of the parent RigidBody2D.
-    </summary>
-    **/
-    public void MoveRigidBody(RigidBody2D body, Physics2DDirectBodyState state){
-        if(!CanMove){
-            return;
-        }       
 
-        Vector2 direction = new Vector2(0,0);
-        Vector2 desacceleration = new Vector2(0,0);
-        if(Input.IsActionPressed(RightAction)){
-            direction.x += 1;
-        }
+
+    // should be called in _IntegrateForces
+    public void IntegrateForces(RigidBody2D body, Physics2DDirectBodyState state){
+        _ApplyMovement(body, state);
+        _ApplyJump(body, state);
+        _ApplyDesacceleration(body, state);
+    }
+
+
+
+
+
+
+
+
+
+    private void _ApplyMovement(RigidBody2D body, Physics2DDirectBodyState state){
+        var velocity = state.LinearVelocity;
+        var direction = new Vector2();
         if(Input.IsActionPressed(LeftAction)){
             direction.x -= 1;
+        }
+        if(Input.IsActionPressed(RightAction)){
+            direction.x += 1;
         }
         if(Input.IsActionPressed(UpAction)){
             direction.y -= 1;
@@ -82,37 +78,42 @@ public class MovementControl : Node, IComponent<RigidBody2D>{
         if(Input.IsActionPressed(DownAction)){
             direction.y += 1;
         }
-        if(
-            !Input.IsActionPressed(RightAction) &&
-            !Input.IsActionPressed(LeftAction) &&
-            !Input.IsActionPressed(UpAction) &&
-            !Input.IsActionPressed(DownAction)
-        ){
-            desacceleration = -state.LinearVelocity.Normalized() * Desacceleration;
+        direction = direction.Normalized();
+        velocity.x = direction.x * Speed;
+        velocity.y = direction.y * Speed;
+        body.LinearVelocity = velocity;
+
+        _LimitSpeed(body,state);
+    }
+
+    private void _LimitSpeed(RigidBody2D body, Physics2DDirectBodyState state){
+        var velocity = state.LinearVelocity;
+        if(velocity.Length() > MaxSpeed){
+            velocity = velocity.Normalized() * MaxSpeed;
         }
+        body.LinearVelocity = velocity;
+    }
 
-        if(desacceleration.Length() != 0){
-            body.AppliedForce = desacceleration;
-        }else{
-            body.AppliedForce = (direction.Normalized() * Speed);
+
+
+
+
+    private void _ApplyJump(RigidBody2D body, Physics2DDirectBodyState state){
+        if(Input.IsActionJustPressed(JumpAction)){
+            var velocity = state.LinearVelocity;
+            velocity.y = -JumpForce;
+            body.LinearVelocity = velocity;
         }
+    }
 
 
-        if(CanJump && Input.IsActionJustPressed(JumpAction)){
-            state.ApplyCentralImpulse(JumpForce);
-        }
 
-        if(state.LinearVelocity.Length() > MaxSpeed){
-            state.LinearVelocity = state.LinearVelocity.Normalized() * MaxSpeed;
-        }
 
-        if(FixedXAxis){
-            body.Position = new Vector2(FixedXAxisValue, body.Position.y);
-        }
 
-        if(FixedYAxis){
-            body.Position = new Vector2(body.Position.x, FixedYAxisValue);
-        }
-
+    private void _ApplyDesacceleration(RigidBody2D body, Physics2DDirectBodyState state){
+        var velocity = state.LinearVelocity;
+        velocity.x *= Desacceleration;
+        velocity.y *= Desacceleration;
+        body.LinearVelocity = velocity;
     }
 }
