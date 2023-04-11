@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Godot;
 
 
@@ -20,6 +21,7 @@ public class Health : Component<Node, Health._Props, Health._Events>
     {
         public int? MaxHealth;
         public int? CurrentHealth;
+        public string[] WeaknessesGroupNames;
         public _Events Events;
     }
     public class _Events
@@ -32,11 +34,14 @@ public class Health : Component<Node, Health._Props, Health._Events>
     public int MaxHealth {get; private set;}
     [Export]
     public int CurrentHealth {get; private set;}
+    [Export]
+    public string[] WeaknessesGroupNames {get; private set;}
 
     protected override void _Init(_Props props)
     {
         MaxHealth = props.MaxHealth ?? MaxHealth;
         CurrentHealth = props.CurrentHealth ?? CurrentHealth;
+        WeaknessesGroupNames = props.WeaknessesGroupNames ?? WeaknessesGroupNames;
         Events = props.Events;
     }
 
@@ -64,7 +69,14 @@ public class Health : Component<Node, Health._Props, Health._Events>
     }
     public void TakeDamage(Damage damage)
     {
-        TakeDamage(damage.Value);
+        foreach(var group in WeaknessesGroupNames)
+        {
+            if (damage.GetGroups().Contains(group))
+            {
+                TakeDamage(damage.Value);
+                return;
+            }
+        }
     }
 
     public void Heal(int heal)

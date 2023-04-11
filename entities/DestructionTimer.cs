@@ -18,11 +18,15 @@ public class DestructionTimer : Timer
     }
 
     private void OnTimeout(){
-        var destructible = GetParentOrNull<IDestructible<Node>>();
-        if(destructible == null){
-            throw new Exception($"The parent node {GetParent().Name} does not implement the IDestructible interface");
-        }
-        var destroyedNodeRemainings = destructible.Destroy();
-        Destroyed?.Invoke(destroyedNodeRemainings);
+        var parent = GetParent();
+        var destructor = parent.GetNodeOrNull<Destructor>("Destructor");
+
+        if(destructor == null)
+            QueueFree();
+
+        var remainings = destructor.Destroy();   
+
+        Destroyed?.Invoke(remainings);
+
     }
 }

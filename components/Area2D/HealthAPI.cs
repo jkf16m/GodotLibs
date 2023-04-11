@@ -1,21 +1,21 @@
 using System;
 using Godot;
+using whitecat.v2;
 
-public class HealthAPI : Component<Area2D, HealthAPI._Props, None>{
-    public class _Props{
-        public string[] Groups;
-    }
-
+public interface IHealthAPI{
+    string[] Groups{get;}
+    NodePath HealthPath{get;}
+    Health Health{get;}
+}
+public class HealthAPI : whitecat.v2.Component<Area2D, IHealthAPI>{
+    
     [Export]
     public string[] Groups{get; set;}
     [Export]
     public NodePath HealthPath{get; set;}
     public Health Health{get; set;}
 
-    protected override void _Init(HealthAPI._Props props){
-        Groups = props.Groups ?? Groups;       
-        Health = GetNodeOrNullOnce<Health>(HealthPath) ?? Health;
-
+    protected override void _Init(IHealthAPI props){
         Parent.Connect("area_entered", this, nameof(OnAreaEntered));
     }
 

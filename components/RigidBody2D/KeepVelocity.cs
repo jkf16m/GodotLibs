@@ -1,13 +1,24 @@
 using Godot;
 using System;
 
-public class KeepVelocity : Node, IComponent<RigidBody2D>
+public class KeepVelocity : Component<RigidBody2D, KeepVelocity._Props, None>
 {
-    public RigidBody2D Parent { get; set; }
+    public class _Props{
+        public float? Speed {get; set;} = 0.1f;
+        public bool? CanSurpassSpeed {get; set;} = false;
+    }
+
+
     [Export]
     public float Speed { get; set; } = 0.1f;
     [Export]
     public bool CanSurpassSpeed { get; set; } = false;
+
+    protected override void _Init(_Props props)
+    {
+        Speed = props.Speed ?? Speed;
+        CanSurpassSpeed = props.CanSurpassSpeed ?? CanSurpassSpeed;
+    }
     public override void _Ready()
     {
         Parent = GetParent<RigidBody2D>();
@@ -15,7 +26,7 @@ public class KeepVelocity : Node, IComponent<RigidBody2D>
         Parent.LinearDamp = 0;
     }
 
-    public void KeepSpeed(RigidBody2D body, Physics2DDirectBodyState state){
+    public void IntegrateForces(RigidBody2D body, Physics2DDirectBodyState state){
         var velocity = state.LinearVelocity;
 
         if(velocity.Length() > Speed && !CanSurpassSpeed){

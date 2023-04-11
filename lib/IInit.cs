@@ -1,4 +1,11 @@
+using System;
+
 public interface IInit<T>
 {
-    void _Init(T props);
+    void Init(Action<T> props);
+}
+
+public interface IInitialized<T>
+{
+    event Action<T> Initialized;
 }

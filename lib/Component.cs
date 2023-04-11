@@ -14,7 +14,7 @@ The _Init method is called when the component is ready and it receives the props
 <typeparam name="EventsType">The type of the events.</typeparam>
 **/
 public abstract class Component<ParentType, PropsType, EventsType>
-: Node, IComponent<ParentType, EventsType> 
+: Node, IComponent<ParentType, PropsType, EventsType> 
 where ParentType : Node
 where PropsType : new()
 where EventsType : new()

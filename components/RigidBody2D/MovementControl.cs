@@ -8,6 +8,7 @@ public class MovementControl : Component<RigidBody2D, MovementControl._Props, No
         public string LeftAction;
         public string RightAction;
         public string JumpAction;
+        public bool? CanJump;
         public float? MaxSpeed;
         public float? Speed;
         public float? JumpForce;
@@ -29,6 +30,8 @@ public class MovementControl : Component<RigidBody2D, MovementControl._Props, No
     [Export]
     public float Speed{get; set;} = 100;
     [Export]
+    public bool CanJump{get; set;} = true;
+    [Export]
     public float JumpForce{get; set;} = 100;
     [Export]
     public float Desacceleration{get; set;} = 0.5f;
@@ -43,6 +46,7 @@ public class MovementControl : Component<RigidBody2D, MovementControl._Props, No
         MaxSpeed = props.MaxSpeed ?? MaxSpeed;
         JumpForce = props.JumpForce ?? JumpForce;
         Desacceleration = props.Desacceleration ?? Desacceleration;
+        CanJump = props.CanJump ?? CanJump;
     }
 
 
@@ -50,9 +54,12 @@ public class MovementControl : Component<RigidBody2D, MovementControl._Props, No
 
     // should be called in _IntegrateForces
     public void IntegrateForces(RigidBody2D body, Physics2DDirectBodyState state){
+        if(CanJump)
+            _ApplyJump(body, state);
         _ApplyMovement(body, state);
-        _ApplyJump(body, state);
-        _ApplyDesacceleration(body, state);
+        _ApplyDeceleration(body, state);
+        _ApplyLimitSpeed(body, state);
+        //_ApplyLimitSpeed(body, state);
     }
 
 
@@ -63,35 +70,51 @@ public class MovementControl : Component<RigidBody2D, MovementControl._Props, No
 
 
 
-    private void _ApplyMovement(RigidBody2D body, Physics2DDirectBodyState state){
-        var velocity = state.LinearVelocity;
-        var direction = new Vector2();
-        if(Input.IsActionPressed(LeftAction)){
+    private void _ApplyMovement(RigidBody2D body, Physics2DDirectBodyState state)
+    {
+
+        var direction = Vector2.Zero;
+        var desacceleration = Vector2.Zero;
+        if (Input.IsActionPressed(LeftAction))
+        {
             direction.x -= 1;
         }
-        if(Input.IsActionPressed(RightAction)){
+        if (Input.IsActionPressed(RightAction))
+        {
             direction.x += 1;
         }
-        if(Input.IsActionPressed(UpAction)){
+        if (Input.IsActionPressed(UpAction))
+        {
             direction.y -= 1;
         }
-        if(Input.IsActionPressed(DownAction)){
+        if (Input.IsActionPressed(DownAction))
+        {
             direction.y += 1;
         }
-        direction = direction.Normalized();
-        velocity.x = direction.x * Speed;
-        velocity.y = direction.y * Speed;
-        body.LinearVelocity = velocity;
+        body.AppliedForce = (direction.Normalized() * Speed);
+        //desacceleration = _Decelerate(state, desacceleration);
 
-        _LimitSpeed(body,state);
     }
 
-    private void _LimitSpeed(RigidBody2D body, Physics2DDirectBodyState state){
-        var velocity = state.LinearVelocity;
-        if(velocity.Length() > MaxSpeed){
-            velocity = velocity.Normalized() * MaxSpeed;
+    private Vector2 _Decelerate(Physics2DDirectBodyState state, Vector2 desacceleration)
+    {
+        if (
+                    !Input.IsActionPressed(LeftAction) &&
+                    !Input.IsActionPressed(RightAction) &&
+                    !Input.IsActionPressed(UpAction) &&
+                    !Input.IsActionPressed(DownAction)
+                )
+        {
+            desacceleration = -state.LinearVelocity.Normalized() * Desacceleration;
         }
-        body.LinearVelocity = velocity;
+
+        return desacceleration;
+    }
+
+    private void _ApplyLimitSpeed(RigidBody2D body, Physics2DDirectBodyState state){
+        if(state.LinearVelocity.Length() > MaxSpeed){
+            body.LinearVelocity = state.LinearVelocity.Normalized() * MaxSpeed;
+        }
     }
 
 
@@ -110,10 +133,20 @@ public class MovementControl : Component<RigidBody2D, MovementControl._Props, No
 
 
 
-    private void _ApplyDesacceleration(RigidBody2D body, Physics2DDirectBodyState state){
-        var velocity = state.LinearVelocity;
-        velocity.x *= Desacceleration;
-        velocity.y *= Desacceleration;
-        body.LinearVelocity = velocity;
+    private void _ApplyDeceleration(RigidBody2D body, Physics2DDirectBodyState state){
+        if (
+                    !Input.IsActionPressed(LeftAction) &&
+                    !Input.IsActionPressed(RightAction) &&
+                    !Input.IsActionPressed(UpAction) &&
+                    !Input.IsActionPressed(DownAction)
+                )
+        {
+            if(body.LinearVelocity.Length() < 5f){
+                body.LinearVelocity = Vector2.Zero;
+                return;
+            }
+            var desacceleration = -state.LinearVelocity.Normalized() * Desacceleration;
+            body.AppliedForce += desacceleration;
+        }
     }
 }

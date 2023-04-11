@@ -16,11 +16,12 @@ public class ApplyInitialImpulse : Component<RigidBody2D, ApplyInitialImpulse._P
         ImpulseForce = props.ImpulseForce ?? ImpulseForce;
         ImpulseTorque = props.ImpulseTorque ?? ImpulseTorque;
 
-        _ApplyImpulse(Parent);
+        _ApplyImpulses(Parent);
     }
 
-    private void _ApplyImpulse(RigidBody2D body){
-        body.ApplyImpulse(ImpulseForce, body.GlobalPosition);
+
+    private void _ApplyImpulses(RigidBody2D body){
+        body.ApplyCentralImpulse(ImpulseForce);
         body.ApplyTorqueImpulse(ImpulseTorque);
     }
 
